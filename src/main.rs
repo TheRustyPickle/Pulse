@@ -1,7 +1,6 @@
 pub mod bot;
 pub mod config;
-pub mod poll;
-pub mod schedule;
+pub mod utils;
 
 use bot::Handler;
 use config::BotConfig;
