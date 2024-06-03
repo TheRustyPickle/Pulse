@@ -3,19 +3,25 @@ pub mod config;
 pub mod utils;
 
 use bot::Handler;
-use config::BotConfig;
-// use quiz::QuizData;
+use config::{BotConfig, QuizData};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
 use tracing::error;
 
-// pub struct QuizStarted;
-//
-// impl TypeMapKey for QuizStarted {
-//     type Value = Arc<Mutex<Option<QuizData>>>;
-// }
+/// Saves a quiz data to track whether a quiz is ongoing
+pub struct OngoingQuiz;
+/// Saves the bot config at the very start for later uses
+pub struct SavedBotConfig;
+
+impl TypeMapKey for OngoingQuiz {
+    type Value = Arc<Mutex<Option<QuizData>>>;
+}
+
+impl TypeMapKey for SavedBotConfig {
+    type Value = Arc<RwLock<BotConfig>>;
+}
 
 #[tokio::main]
 async fn main() {
@@ -37,10 +43,15 @@ async fn main() {
         .await
         .expect("failed to create the client");
 
-    // {
-    //     let mut data = client.data.write().await;
-    //     data.insert::<QuizStarted>(Arc::new(Mutex::new(None)));
-    // }
+    {
+        let mut data = client.data.write().await;
+        data.insert::<OngoingQuiz>(Arc::new(Mutex::new(None)));
+    }
+
+    {
+        let mut data = client.data.write().await;
+        data.insert::<SavedBotConfig>(Arc::new(RwLock::new(config)));
+    }
 
     if let Err(e) = client.start().await {
         error!("Client error: {e}");

@@ -4,10 +4,12 @@ use serenity::builder::{CreateAttachment, CreateMessage, CreatePoll, CreatePollA
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 use std::path::Path;
+use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 use tracing::info;
 
-use crate::config::PollData;
+use crate::config::{BotConfig, PollData, QuizData};
+use crate::{OngoingQuiz, SavedBotConfig};
 
 /// Try to find the target Guild in the bot guild list
 pub fn get_target_guild(ctx: &Context, target_guild: &str) -> Option<Guild> {
@@ -76,4 +78,28 @@ pub async fn sleep_remaining_time() {
     let now = Utc::now();
     let seconds_remaining = (59 - now.second() + 1) as u64;
     sleep(Duration::from_secs(seconds_remaining)).await;
+}
+
+pub async fn save_bot_config(ctx: &Context, config: BotConfig) {
+    let mut data = ctx.data.write().await;
+    data.insert::<SavedBotConfig>(Arc::new(RwLock::new(config)));
+}
+
+pub async fn get_target_channel_id(ctx: &Context) -> ChannelId {
+    let data_read = ctx.data.read().await;
+    let data = data_read.get::<SavedBotConfig>().unwrap();
+    let config = data.read().await;
+    config.get_target_channel_id()
+}
+
+pub async fn set_ongoing_quiz(ctx: &Context, quiz_data: QuizData) {
+    let mut data = ctx.data.write().await;
+    data.insert::<OngoingQuiz>(Arc::new(Mutex::new(Some(quiz_data))));
+}
+
+pub async fn remove_ongoing_quiz(ctx: &Context) {
+    println!("Trying to get a lock");
+    let mut data = ctx.data.write().await;
+    data.insert::<OngoingQuiz>(Arc::new(Mutex::new(None)));
+    println!("Done");
 }

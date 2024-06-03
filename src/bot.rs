@@ -1,6 +1,9 @@
+use std::sync::Arc;
+
 use chrono::Utc;
 use serenity::async_trait;
 use serenity::builder::CreateMessage;
+use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
 use serenity::prelude::*;
 // use std::sync::Arc;
@@ -8,10 +11,12 @@ use tokio::spawn;
 use tokio::time::{sleep, Duration};
 use tracing::{error, info};
 
-use crate::config::{BotConfig, CompletedScheduled, ScheduledMessage};
-use crate::utils::{add_attachments, add_poll, get_target_guild, sleep_remaining_time};
-// use crate::quiz::{get_quiz_data, get_quiz_id};
-// use crate::QuizStarted;
+use crate::config::{BotConfig, CompletedScheduled, QuizData, ScheduledMessage};
+use crate::utils::{
+    add_attachments, add_poll, get_target_channel_id, get_target_guild, remove_ongoing_quiz,
+    save_bot_config, set_ongoing_quiz, sleep_remaining_time,
+};
+use crate::OngoingQuiz;
 
 pub struct Handler;
 
@@ -25,48 +30,58 @@ impl EventHandler for Handler {
         info!("The bot is ready");
     }
 
-    // async fn message(&self, ctx: Context, new_message: Message) {
-    //     if new_message.channel_id != TARGET_CHANNEL_ID {
-    //         info!("Not the correct channel");
-    //         return;
-    //     }
-    //     {
-    //         let data_read = ctx.data.read().await;
-    //         let data = data_read.get::<QuizStarted>().unwrap();
-    //         let quiz_start = data.lock().await;
-    //
-    //         if quiz_start.is_none() {
-    //             info!("Quiz hasn't started yet");
-    //             return;
-    //         }
-    //
-    //         let quiz_answer = quiz_start.clone().unwrap().answer;
-    //
-    //         let message_content = new_message
-    //             .content
-    //             .to_lowercase()
-    //             .replace(['\n', '-', ',', '.', '!', '?', ':', '-'], " ");
-    //
-    //         let split_content = message_content.split_whitespace().collect::<Vec<_>>();
-    //
-    //         if split_content.contains(&quiz_answer.as_str()) {
-    //             let winner = new_message.member(&ctx.http).await.unwrap();
-    //             new_message
-    //                 .reply(
-    //                     &ctx.http(),
-    //                     format!("{} You are the winner!", winner.mention()),
-    //                 )
-    //                 .await
-    //                 .unwrap();
-    //             {
-    //                 let mut data = ctx.data.write().await;
-    //                 data.insert::<QuizStarted>(Arc::new(Mutex::new(None)));
-    //             }
-    //         }
-    //
-    //         info!("Message gotten: {}", new_message.content);
-    //     };
-    // }
+    async fn message(&self, ctx: Context, new_message: Message) {
+        // TODO: load test this part to get a understanding how expensive this process is.
+        let target_channel = get_target_channel_id(&ctx).await;
+        if new_message.channel_id != target_channel {
+            info!("Not the correct channel");
+            return;
+        }
+
+        let mut quiz_done = false;
+
+        {
+            // Intentionally maintain lock on Mutex for an extended period of time
+            // so incase of high message volume, two messages
+            // doesn't get declared as winner while the original one is updating
+
+            let data_read = ctx.data.read().await;
+            let data = data_read.get::<OngoingQuiz>().unwrap();
+            let ongoing_quiz = data.lock().await;
+
+            if ongoing_quiz.is_none() {
+                info!("Quiz hasn't started yet");
+                return;
+            }
+
+            let quiz_data = ongoing_quiz.clone().unwrap();
+            let quiz_answer = quiz_data.answer();
+
+            // TODO: currently modified for single word quiz only. Allow checking for an entire phrase
+            let message_content = new_message
+                .content
+                .to_lowercase()
+                .replace(['\n', '-', ',', '.', '!', '?', ':', '-'], " ");
+
+            let split_content = message_content.split_whitespace().collect::<Vec<_>>();
+
+            if split_content.contains(&quiz_answer.as_str()) {
+                // TODO: Check whether is supposed to be a reply here
+                // let winner = new_message.member(&ctx.http).await.unwrap();
+                // new_message
+                //     .reply(
+                //         &ctx.http(),
+                //         format!("{} You are the winner!", winner.mention()),
+                //     )
+                //     .await
+                //     .unwrap();
+                quiz_done = true;
+            }
+        }
+        if quiz_done {
+            remove_ongoing_quiz(&ctx).await;
+        }
+    }
 }
 
 impl Handler {
@@ -77,13 +92,13 @@ impl Handler {
             error!("Error reading the bot config. Error: {e}");
             std::process::exit(1);
         }
-        let config = bot_config.unwrap();
+        let mut config = bot_config.unwrap();
 
         // Wait 5 seconds for the cache to load
         sleep(Duration::from_secs(5)).await;
 
         let target_guild_name = config.get_target_guild();
-        let target_channel_name = config.get_target_guild();
+        let target_channel_name = config.get_target_channel();
 
         let mut target_channel = None;
         let mut target_guild = get_target_guild(&ctx, &target_guild_name);
@@ -102,6 +117,7 @@ impl Handler {
             for target in &target_guild.channels {
                 if target.1.name() == target_channel_name {
                     target_channel = Some(target);
+                    config.set_target_channel_id(*target.0);
                     break;
                 }
             }
@@ -111,6 +127,7 @@ impl Handler {
                 continue;
             }
         }
+        save_bot_config(&ctx, config).await;
 
         let target_channel = target_channel.unwrap();
         info!("Target channel found");
@@ -159,7 +176,10 @@ impl Handler {
                     let add_poll_result = add_poll(to_send, id);
 
                     if let Err(e) = add_poll_result {
-                        error!("Failed to add poll to the message. Reason: {e}");
+                        error!(
+                            "Failed to add poll to the scheduled message with id {}. Reason: {e}",
+                            message.id()
+                        );
                         continue;
                     }
 
@@ -170,11 +190,25 @@ impl Handler {
                     let add_attachments_result = add_attachments(to_send, locations).await;
 
                     if let Err(e) = add_attachments_result {
-                        error!("Failed to add attachments to the message. Reason: {e}");
+                        error!("Failed to add attachments to the scheduled message with id {}. Reason: {e}", message.id());
                         continue;
                     }
 
                     to_send = add_attachments_result.unwrap();
+                }
+
+                let mut quiz_data = None;
+                if let Some(id) = message.quiz_id {
+                    let quiz_data_result = QuizData::get_quiz_data(id);
+
+                    if let Err(e) = quiz_data_result {
+                        error!(
+                            "Failed to get quiz data for scheduled message with id {}. Reason: {e}",
+                            message.id()
+                        );
+                        continue;
+                    }
+                    quiz_data = Some(quiz_data_result.unwrap())
                 }
 
                 let result = target_channel.1.send_message(&ctx.http, to_send).await;
@@ -196,12 +230,11 @@ impl Handler {
                         }
                     }
                 }
-                // if let Some(id) = get_quiz_id(message.id) {
-                //     let quiz = get_quiz_data(id);
-                //     let mut data = ctx.data.write().await;
-                //     data.insert::<QuizStarted>(Arc::new(Mutex::new(Some(quiz))))
-                // }
-                //
+
+                if let Some(data) = quiz_data {
+                    set_ongoing_quiz(&ctx, data).await;
+                }
+
                 completed.add_new_completed(message.id());
 
                 // Try to save the scheduled id as completed 3 times. If failed, exit the bot

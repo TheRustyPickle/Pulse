@@ -12,6 +12,7 @@ pub struct ScheduledMessage {
     pub attachments: Option<Vec<String>>,
     scheduled_at: DateTime<Utc>,
     pub poll_id: Option<u32>,
+    pub quiz_id: Option<u32>,
     pub to_pin: Option<bool>,
 }
 
