@@ -48,11 +48,6 @@ async fn main() {
         data.insert::<OngoingQuiz>(Arc::new(Mutex::new(None)));
     }
 
-    {
-        let mut data = client.data.write().await;
-        data.insert::<SavedBotConfig>(Arc::new(RwLock::new(config)));
-    }
-
     if let Err(e) = client.start().await {
         error!("Client error: {e}");
     }
