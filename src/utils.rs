@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Error};
+use anyhow::Error;
 use chrono::{Timelike, Utc};
 use serenity::builder::{CreateAttachment, CreateMessage, CreatePoll, CreatePollAnswer};
 use serenity::model::prelude::*;
@@ -30,13 +30,7 @@ pub fn get_target_guild(ctx: &Context, target_guild: &str) -> Option<Guild> {
 
 /// Add a poll to a discord message
 pub fn add_poll(message: CreateMessage, id: u32) -> Result<CreateMessage, Error> {
-    let poll_data = PollData::get_poll_data(id);
-
-    if let Err(e) = poll_data {
-        return Err(anyhow!("Failed to read poll message data. Reason: {e}"));
-    }
-
-    let poll_data = poll_data.unwrap();
+    let poll_data = PollData::get_poll_data(id)?;
 
     let mut poll_questions = Vec::new();
 
@@ -59,15 +53,8 @@ pub async fn add_attachments(
 ) -> Result<CreateMessage, Error> {
     for location in locations {
         let attachment_path = Path::new(location);
-        let attachment = CreateAttachment::path(attachment_path).await;
-        match attachment {
-            Ok(att) => message = message.add_file(att),
-            Err(e) => {
-                return Err(anyhow!(
-                "Failed to create attachment for the message from location {location}. Reason: {e}"
-            ))
-            }
-        }
+        let attachment = CreateAttachment::path(attachment_path).await?;
+        message = message.add_file(attachment);
     }
 
     Ok(message)
@@ -80,11 +67,13 @@ pub async fn sleep_remaining_time() {
     sleep(Duration::from_secs(seconds_remaining)).await;
 }
 
+/// Saves bot config with global access
 pub async fn save_bot_config(ctx: &Context, config: BotConfig) {
     let mut data = ctx.data.write().await;
     data.insert::<SavedBotConfig>(Arc::new(RwLock::new(config)));
 }
 
+/// Gets the target channel id from the saved bot config
 pub async fn get_target_channel_id(ctx: &Context) -> ChannelId {
     let data_read = ctx.data.read().await;
     let data = data_read.get::<SavedBotConfig>().unwrap();
@@ -92,14 +81,29 @@ pub async fn get_target_channel_id(ctx: &Context) -> ChannelId {
     config.get_target_channel_id()
 }
 
+/// Saves a `QuizData` as ongoing with global access
 pub async fn set_ongoing_quiz(ctx: &Context, quiz_data: QuizData) {
     let mut data = ctx.data.write().await;
     data.insert::<OngoingQuiz>(Arc::new(Mutex::new(Some(quiz_data))));
 }
 
+/// Removes the value saved in place of `OngoingQuiz`
 pub async fn remove_ongoing_quiz(ctx: &Context) {
-    println!("Trying to get a lock");
     let mut data = ctx.data.write().await;
     data.insert::<OngoingQuiz>(Arc::new(Mutex::new(None)));
-    println!("Done");
+}
+
+/// Whether the content contains the target answer in the exact same order
+pub fn contains_answer(content: Vec<&str>, answer: Vec<&str>) -> bool {
+    if answer.len() == 1 && content.contains(&answer[0]) {
+        return true;
+    }
+
+    if answer.len() > content.len() {
+        return false;
+    }
+
+    content
+        .windows(answer.len())
+        .any(|window| window == answer.as_slice())
 }
