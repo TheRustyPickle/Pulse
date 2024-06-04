@@ -23,7 +23,7 @@ impl ScheduledMessage {
         let mut json_string = String::new();
 
         file.read_to_string(&mut json_string)
-            .context("Failed to read schedule.json")?;
+            .context("Failed to read schedule.json").context("Failed to read schedule.json")?;
 
         let result: Vec<ScheduledMessage> =
             serde_json::from_str(&json_string).context("Failed to parse schedule.json file")?;
@@ -54,10 +54,10 @@ impl CompletedScheduled {
     }
 
     pub fn get_completed_scheduled() -> Result<CompletedScheduled, Error> {
-        let mut file = File::open("config/completed.json")?;
+        let mut file = File::open("config/completed.json").context("Failed to open completed.json")?;
         let mut json_string = String::new();
 
-        file.read_to_string(&mut json_string)?;
+        file.read_to_string(&mut json_string).context("Failed to read completed.json")?;
 
         let result: CompletedScheduled =
             serde_json::from_str(&json_string).context("Failed to parse completed.json file")?;
@@ -65,11 +65,11 @@ impl CompletedScheduled {
     }
 
     pub fn save_completed_scheduled(&self) -> Result<(), Error> {
-        let serialized_data = serde_json::to_string(self)?;
+        let serialized_data = serde_json::to_string(self).context("Failed to serialize data")?;
 
-        let mut file = File::create("config/completed.json")?;
+        let mut file = File::create("config/completed.json").context("Failed to create completed.json")?;
 
-        file.write_all(serialized_data.as_bytes())?;
+        file.write_all(serialized_data.as_bytes()).context("Failed to write to completed.json")?;
         Ok(())
     }
 }

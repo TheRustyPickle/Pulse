@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, Context, Error};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::fs::File;
@@ -30,17 +30,17 @@ impl QuizData {
     }
 
     pub fn get_all_quiz_data() -> Result<Vec<QuizData>, Error> {
-        let mut file = File::open("config/quiz.json")?;
+        let mut file = File::open("config/quiz.json").context("Failed to open quiz.json")?;
         let mut json_string = String::new();
 
-        file.read_to_string(&mut json_string)?;
+        file.read_to_string(&mut json_string).context("Failed to read quiz.json")?;
 
-        let result: Vec<QuizData> = serde_json::from_str(&json_string)?;
+        let result: Vec<QuizData> = serde_json::from_str(&json_string).context("Failed to parse quiz.json")?;
         Ok(result)
     }
 
     pub fn get_quiz_data(quiz_id: u32) -> Result<QuizData, Error> {
-        let all_quizzes = QuizData::get_all_quiz_data()?;
+        let all_quizzes = QuizData::get_all_quiz_data().context("Failed to get all quiz data")?;
 
         for quiz in all_quizzes {
             if quiz.id == quiz_id {
