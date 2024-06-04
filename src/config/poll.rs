@@ -27,7 +27,8 @@ impl PollData {
         let mut file = File::open("config/poll.json").context("Failed to open poll.json file")?;
         let mut json_string = String::new();
 
-        file.read_to_string(&mut json_string).context("Failed to read poll.json")?;
+        file.read_to_string(&mut json_string)
+            .context("Failed to read poll.json")?;
         let result: Vec<PollData> =
             serde_json::from_str(&json_string).context("Failed to parse poll.json file")?;
         Ok(result)

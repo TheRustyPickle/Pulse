@@ -16,12 +16,15 @@ pub struct BotConfig {
 
 impl BotConfig {
     pub fn get_config() -> Result<Self, Box<dyn Error>> {
-        let mut file = File::open("config/bot_config.json").context("Failed to open bot_config.json")?;
+        let mut file =
+            File::open("config/bot_config.json").context("Failed to open bot_config.json")?;
         let mut json_string = String::new();
 
-        file.read_to_string(&mut json_string).context("Failed to read bot_config.json")?;
+        file.read_to_string(&mut json_string)
+            .context("Failed to read bot_config.json")?;
 
-        let result: BotConfig = serde_json::from_str(&json_string).context("Failed to parse bot_config.json")?;
+        let result: BotConfig =
+            serde_json::from_str(&json_string).context("Failed to parse bot_config.json")?;
         Ok(result)
     }
 

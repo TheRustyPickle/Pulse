@@ -33,9 +33,11 @@ impl QuizData {
         let mut file = File::open("config/quiz.json").context("Failed to open quiz.json")?;
         let mut json_string = String::new();
 
-        file.read_to_string(&mut json_string).context("Failed to read quiz.json")?;
+        file.read_to_string(&mut json_string)
+            .context("Failed to read quiz.json")?;
 
-        let result: Vec<QuizData> = serde_json::from_str(&json_string).context("Failed to parse quiz.json")?;
+        let result: Vec<QuizData> =
+            serde_json::from_str(&json_string).context("Failed to parse quiz.json")?;
         Ok(result)
     }
 
