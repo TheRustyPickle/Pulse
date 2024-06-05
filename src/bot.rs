@@ -29,7 +29,6 @@ impl EventHandler for Handler {
     }
 
     async fn message(&self, ctx: Context, new_message: Message) {
-        // TODO: load test this part to get a understanding how expensive this process is.
         let target_channel = get_target_channel_id(&ctx).await;
         if new_message.channel_id != target_channel {
             return;
@@ -115,8 +114,8 @@ impl Handler {
         }
         let mut config = bot_config.unwrap();
 
-        info!("Waiting for cache to load");
         // Wait 5 seconds for the cache to load
+        info!("Waiting for cache to load");
         sleep(Duration::from_secs(5)).await;
 
         let target_guild_name = config.get_target_guild();
@@ -229,7 +228,7 @@ impl Handler {
 
                     if let Err(e) = quiz_data_result {
                         error!(
-                            "Failed to get quiz data for scheduled message with id {}. Reason: {e}",
+                            "Failed to get quiz data with id {id} for scheduled message with id {}. Reason: {e}",
                             message.id()
                         );
                         continue;
@@ -239,11 +238,11 @@ impl Handler {
 
                 let result = target_channel.1.send_message(&ctx, to_send).await;
                 if let Err(e) = result {
-                    info!("Failed to send the message. Reason: {e}");
+                    info!("Failed to send scheduled message with id {}. This won't be set as completed. Reason: {e}", message.id());
                     continue;
                 }
 
-                info!("Schedule message with id {} was sent", message.id());
+                info!("Scheduled message with id {} was sent", message.id());
 
                 let sent_message = result.unwrap();
 
@@ -251,7 +250,7 @@ impl Handler {
                     if to_pin {
                         let pin_result = sent_message.pin(&ctx).await;
                         if let Err(e) = pin_result {
-                            error!("Failed to pin the message. This message will be marked as completed regardless. Reason: {e}");
+                            error!("Failed to pin scheduled message with id {}. This message will be marked as completed regardless. Reason: {e}", message.id());
                         }
                     }
                 }

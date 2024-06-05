@@ -7,7 +7,7 @@ use std::io::Read;
 pub struct PollData {
     id: u32,
     message: String,
-    questions: Vec<String>,
+    answers: Vec<String>,
 }
 
 impl PollData {
@@ -19,8 +19,8 @@ impl PollData {
         self.message.clone()
     }
 
-    pub fn questions(&self) -> &Vec<String> {
-        &self.questions
+    pub fn answers(&self) -> &Vec<String> {
+        &self.answers
     }
 
     pub fn get_all_polls() -> Result<Vec<PollData>, Error> {
