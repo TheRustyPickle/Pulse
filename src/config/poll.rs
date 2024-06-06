@@ -6,7 +6,7 @@ use std::io::Read;
 #[derive(Deserialize, Clone)]
 pub struct PollData {
     id: u32,
-    message: String,
+    question: String,
     answers: Vec<String>,
 }
 
@@ -15,8 +15,8 @@ impl PollData {
         self.id
     }
 
-    pub fn message(&self) -> String {
-        self.message.clone()
+    pub fn question(&self) -> String {
+        self.question.clone()
     }
 
     pub fn answers(&self) -> &Vec<String> {

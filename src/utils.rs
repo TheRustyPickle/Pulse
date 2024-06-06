@@ -42,7 +42,7 @@ pub fn add_poll(message: CreateMessage, id: u32) -> Result<CreateMessage, Error>
     // TODO: take an additional param to set duration
     // TODO: take an additional param to set whether multi answer
     let poll = CreatePoll::new()
-        .question(poll_data.message())
+        .question(poll_data.question())
         .answers(poll_answers)
         .duration(time::Duration::from_secs(60 * 60 * 24));
 
