@@ -90,11 +90,9 @@ impl EventHandler for Handler {
                 info!("Quiz answer found in message: {}", new_message.content);
                 quiz_done = true;
 
-                if let Some(to_reply) = quiz_data.reply_with() {
-                    let result = new_message.reply(&ctx, to_reply).await;
-                    if let Err(e) = result {
-                        error!("Failed to send the reply to the winner. This will be considered as completed regardless. Reason: {e}")
-                    }
+                let result = new_message.reply(&ctx, quiz_data.reply_with()).await;
+                if let Err(e) = result {
+                    error!("Failed to send the reply to the winner. This will be considered as completed regardless. Reason: {e}")
                 }
             }
         }

@@ -8,8 +8,8 @@ use std::io::Read;
 pub struct QuizData {
     id: u32,
     answer: String,
+    reply_with: String,
     end_at: Option<DateTime<Utc>>,
-    reply_with: Option<String>,
 }
 
 impl QuizData {
@@ -25,8 +25,8 @@ impl QuizData {
         &self.end_at
     }
 
-    pub fn reply_with(&self) -> &Option<String> {
-        &self.reply_with
+    pub fn reply_with(&self) -> String {
+        self.reply_with.clone()
     }
 
     pub fn get_all_quiz_data() -> Result<Vec<QuizData>, Error> {
