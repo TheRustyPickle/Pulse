@@ -42,7 +42,7 @@ impl QuizData {
     }
 
     pub fn get_quiz_data(quiz_id: u32) -> Result<QuizData, Error> {
-        let all_quizzes = QuizData::get_all_quiz_data().context("Failed to get all quiz data")?;
+        let all_quizzes = QuizData::get_all_quiz_data()?;
 
         for quiz in all_quizzes {
             if quiz.id == quiz_id {

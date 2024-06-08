@@ -35,7 +35,7 @@ impl PollData {
     }
 
     pub fn get_poll_data(id: u32) -> Result<PollData, Error> {
-        let all_poll = PollData::get_all_polls().context("Failed to get poll data")?;
+        let all_poll = PollData::get_all_polls()?;
         for poll in all_poll {
             if poll.id == id {
                 return Ok(poll);
