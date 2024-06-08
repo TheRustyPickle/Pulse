@@ -1,1 +1,22 @@
-[]
+[
+    {
+        "id": 1,
+        "question": "What is your favorite color?",
+        "answers": [
+            "Blue",
+            "Red",
+            "Green",
+            "White"
+        ]
+    },
+    {
+        "id": 2,
+        "question": "What year is this?",
+        "answers": [
+            "2022",
+            "2023",
+            "2024",
+            "2025"
+        ]
+    }
+]

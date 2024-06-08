@@ -1,1 +1,13 @@
-[]
+[
+    {
+        "id": 1,
+        "answer": "5",
+        "reply_with": "Your calculation is correct!"
+    },
+    {
+        "id": 2,
+        "answer": "Blue Whale",
+        "reply_with": "The blue whale is indeed the largest animal on earth! Congratulations!",
+        "end_at": "2024-06-01 12:00:00 UTC"
+    }
+]

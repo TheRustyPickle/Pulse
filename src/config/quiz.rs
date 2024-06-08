@@ -8,8 +8,8 @@ use std::io::Read;
 pub struct QuizData {
     id: u32,
     answer: String,
+    reply_with: String,
     end_at: Option<DateTime<Utc>>,
-    reply_with: Option<String>,
 }
 
 impl QuizData {
@@ -25,8 +25,8 @@ impl QuizData {
         &self.end_at
     }
 
-    pub fn reply_with(&self) -> &Option<String> {
-        &self.reply_with
+    pub fn reply_with(&self) -> String {
+        self.reply_with.clone()
     }
 
     pub fn get_all_quiz_data() -> Result<Vec<QuizData>, Error> {
@@ -42,7 +42,7 @@ impl QuizData {
     }
 
     pub fn get_quiz_data(quiz_id: u32) -> Result<QuizData, Error> {
-        let all_quizzes = QuizData::get_all_quiz_data().context("Failed to get all quiz data")?;
+        let all_quizzes = QuizData::get_all_quiz_data()?;
 
         for quiz in all_quizzes {
             if quiz.id == quiz_id {

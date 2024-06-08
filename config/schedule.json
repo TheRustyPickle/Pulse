@@ -1,1 +1,49 @@
-[]
+[
+    {
+        "id": 1,
+        "message": "This is a normal scheduled message",
+        "scheduled_at": "2024-06-01 12:00:00 UTC"
+    },
+    {
+        "id": 2,
+        "message": "This scheduled message will be pinned",
+        "scheduled_at": "2024-06-01 13:00:00 UTC",
+        "to_pin": true
+    },
+    {
+        "id": 3,
+        "message": "This is how to set a poll message",
+        "scheduled_at": "2024-06-01 14:00:00 UTC",
+        "poll_id": 1,
+        "to_pin": true
+    },
+    {
+        "id": 4,
+        "message": "This is how to set a quiz message",
+        "scheduled_at": "2024-06-01 15:00:00 UTC",
+        "quiz_id": 1
+    },
+    {
+        "id": 5,
+        "message": "This is how to set another poll message",
+        "scheduled_at": "2024-06-01 16:00:00 UTC",
+        "poll_id": 2
+    },
+    {
+        "id": 6,
+        "message": "This is a quiz message with attachmenments",
+        "scheduled_at": "2024-06-01 17:00:00 UTC",
+        "quiz_id": 2,
+        "attachments": [
+            "files/video.mp4",
+            "files/image.png"
+        ]
+    },
+    {
+        "id": 7,
+        "message": "@here This is message is reusing a poll message with here mention",
+        "scheduled_at": "2024-06-01 18:00:00 UTC",
+        "poll_id": 1,
+        "to_pin": true
+    }
+]
