@@ -1,5 +1,5 @@
 {
-    "bot_token": "",
-    "target_guild": "",
-    "target_channel": ""
+    "bot_token": "My Bot Token",
+    "target_guild": "My server name",
+    "target_channel": "Server channel name"
 }
