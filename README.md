@@ -2,12 +2,12 @@
 <div align="center">
 <a href="https://wakatime.com/badge/github/TheRustyPickle/Pulse"><img src="https://wakatime.com/badge/github/TheRustyPickle/Pulse.svg" alt="wakatime"></a>
 </div>
-Pulse is a straightforward Discord bot for scheduling various types of messages with basic customization options. Built with Rust and the Serenity library, it focuses on ease of use with a simple configuration system.
+Pulse is a straightforward Discord bot for scheduling messages with some customization options. Built with Rust and the Serenity library, it focuses on ease of use with a simple configuration system.
 
 ## Key Features
 
 * Schedule Discord messages in a guild
-* Supports various types of messages including file attachments, Polls and Quizzes
+* Supports various types of messages including file attachments, Polls, and Quizzes
 * Robust error handling to ensure the bot does not crash in most cases (unless something fatal occurs)
 * Easy to understand configuration system with JSON files, no nested complicated config
 * No need for restarts for schedule configuration changes (except for bot config)
@@ -18,7 +18,7 @@ Pulse is a straightforward Discord bot for scheduling various types of messages 
 `
 git clone https://github.com/TheRustyPickle/Rex
 `
-* Update configurations inn `config` folder as required
+* Update configurations in the `config` folder as required
 
 * Run with Cargo
 `
@@ -27,7 +27,7 @@ cargo run --release
 
 ## Configuration
 
-Detailed configuration details can be found on [CONFIG.md file](CONFIG.md). A number of example configurations are available in the `config` folder.
+Detailed configuration details can be found on [CONFIG.md file](CONFIG.md). Some example configurations are available in the `config` folder.
 
 ## What is a Quiz Message?
 
