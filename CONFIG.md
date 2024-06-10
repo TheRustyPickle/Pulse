@@ -67,13 +67,17 @@ Contains an array that holds all poll data. Does not require restart upon any ch
 {
     "id": 1,
     "question": "Which is your favorite color?",
-    "answers": ["Red", "Blue", "Green"]
+    "answers": ["Red", "Blue", "Green"],
+    "duration_minutes": 2000,
+    "multiple_answer": true
 }
 ```
 
 * `id`: (Number) Unique ID of the poll. Mandatory field
 * `question`: (String) Question of the poll. Mandatory field
 * `answers`: (Array of String) Answers to this poll. Must be at least 2 values. Mandatory field
+* `duration_minutes`: (Number) Duration of the poll in minutes. Default value is 1440. Maximum value 10080. Optional field
+* `multiple_answer`: (Boolean) If true, multiple answers will be enabled. Default value is false. Optional field
 
 ### quiz.json
 
@@ -91,7 +95,7 @@ Contains an array that holds all quiz data. Does not require restart upon any ch
 * `id`: (Number) Unique ID of the quiz. Mandatory field
 * `answer`: (String) The sentence or word that will be considered as answer to the quiz. Mandatory field
 * `reply_with`: (String) The message that will be sent to the user who gives the correct answer. Mandatory field
-* `end_at`: (String) The time when the quiz will end in UTC. Replies after this will not be checked. Optional field
+* `end_at`: (String) The time when the quiz will end in UTC. Default value is no end time. Replies after this will not be checked. Optional field
 
 ## Further questions
 

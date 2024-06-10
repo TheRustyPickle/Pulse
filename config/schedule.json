@@ -41,7 +41,7 @@
     },
     {
         "id": 7,
-        "message": "@here This is message is reusing a poll message with here mention",
+        "message": "@here This message is reusing a poll message with here mention",
         "scheduled_at": "2024-06-01 18:00:00 UTC",
         "poll_id": 1,
         "to_pin": true

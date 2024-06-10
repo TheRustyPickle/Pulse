@@ -7,7 +7,9 @@
             "Red",
             "Green",
             "White"
-        ]
+        ],
+        "multi_answer": true,
+        "duration_minutes": 11000
     },
     {
         "id": 2,
@@ -17,6 +19,7 @@
             "2023",
             "2024",
             "2025"
-        ]
+        ],
+        "duration_minutes": 2000
     }
 ]
