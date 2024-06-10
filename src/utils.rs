@@ -1,4 +1,4 @@
-use anyhow::Error;
+use anyhow::{Error, anyhow};
 use chrono::{Timelike, Utc};
 use serenity::builder::{CreateAttachment, CreateMessage, CreatePoll, CreatePollAnswer};
 use serenity::model::prelude::*;
@@ -29,6 +29,15 @@ pub fn get_target_guild(ctx: &Context, target_guild: &str) -> Option<Guild> {
     None
 }
 
+pub fn get_target_channel(guild: Guild, channel_name: &str) -> Option<(ChannelId, GuildChannel)> {
+    for (channel_id, channel) in guild.channels {
+        if channel.name() == channel_name {
+            return Some((channel_id, channel))
+        }
+    }
+    None
+}
+
 /// Add a poll to a discord message
 pub fn add_poll(message: CreateMessage, id: u32) -> Result<CreateMessage, Error> {
     let poll_data = PollData::get_poll_data(id)?;
@@ -37,6 +46,10 @@ pub fn add_poll(message: CreateMessage, id: u32) -> Result<CreateMessage, Error>
 
     for question in poll_data.answers() {
         poll_answers.push(CreatePollAnswer::new().text(question));
+    }
+
+    if poll_answers.len() < 2 {
+        return Err(anyhow!("Total answer for this poll is less than 2 which is invalid"))
     }
 
     // TODO: take an additional param to set duration

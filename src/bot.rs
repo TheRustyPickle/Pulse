@@ -11,8 +11,8 @@ use tracing::{error, info};
 
 use crate::config::{BotConfig, CompletedScheduled, QuizData, ScheduledMessage};
 use crate::utils::{
-    add_attachments, add_poll, contains_answer, get_target_channel_id, get_target_guild,
-    remove_ongoing_quiz, save_bot_config, set_ongoing_quiz, sleep_remaining_time,
+    add_attachments, add_poll, contains_answer, get_target_channel, get_target_channel_id,
+    get_target_guild, remove_ongoing_quiz, save_bot_config, set_ongoing_quiz, sleep_remaining_time,
 };
 use crate::OngoingQuiz;
 
@@ -124,40 +124,36 @@ impl Handler {
             target_guild_name, target_channel_name
         );
 
+        let mut target_guild = None;
         let mut target_channel = None;
-        let mut target_guild = get_target_guild(&ctx, &target_guild_name);
 
-        // keep looping until the target guild is found
-        while target_guild.is_none() {
-            error!("Target guild not found. Trying again in 60 seconds");
-            sleep(Duration::from_secs(60)).await;
+        // Fetch both guild and channel in a single flow. In case the guild channel list gets
+        // updated and the target channel is part of that, this should ensure the search isn't
+        // happening on stale guild data
+        while target_guild.is_none() && target_channel.is_none() {
             target_guild = get_target_guild(&ctx, &target_guild_name);
-        }
 
-        let target_guild = target_guild.unwrap();
+            if let Some(guild) = &target_guild {
+                target_channel = get_target_channel(guild.clone(), &target_channel_name);
 
-        // keep looping until the target channel is found
-        while target_channel.is_none() {
-            for target in &target_guild.channels {
-                if target.1.name() == target_channel_name {
-                    target_channel = Some(target);
-                    config.set_target_channel_id(*target.0);
-                    break;
+                if target_channel.is_none() {
+                    error!("Target channel not found. Trying again in 60 seconds");
                 }
-            }
-            if target_channel.is_none() {
-                error!("Failed to get target channel in the guild. Trying again in 60 seconds");
-                sleep(Duration::from_secs(60)).await;
+            } else {
+                error!("Target guild not found. Trying again in 60 seconds");
             }
         }
-        save_bot_config(&ctx, config).await;
 
+        // let target_guild = target_guild.unwrap();
         let target_channel = target_channel.unwrap();
+        config.set_target_channel_id(target_channel.0);
         info!("Target channel found");
+
+        save_bot_config(&ctx, config).await;
         info!("Starting scheduling.");
 
         loop {
-            // If anything fails during this loop, sleep till the current minute ends and try
+            // For most thing that fails during this loop, sleep till the current minute ends and try
             // again the next minute
 
             let schedule_data = ScheduledMessage::get_all_scheduled_messages();
@@ -195,7 +191,10 @@ impl Handler {
             for message in to_handle {
                 let mut to_send = CreateMessage::new().content(message.message());
 
+                let mut is_poll = false;
+
                 if let Some(id) = message.poll_id {
+                    is_poll = true;
                     let add_poll_result = add_poll(to_send, id);
 
                     if let Err(e) = add_poll_result {
@@ -210,14 +209,18 @@ impl Handler {
                 }
 
                 if let Some(locations) = &message.attachments {
-                    let add_attachments_result = add_attachments(to_send, locations).await;
+                    if is_poll {
+                        error!("Cannot add attachments to a poll message. The attachments will be ignored.");
+                    } else {
+                        let add_attachments_result = add_attachments(to_send, locations).await;
 
-                    if let Err(e) = add_attachments_result {
-                        error!("Failed to add attachments to the scheduled message with id {}. Reason: {e}", message.id());
-                        continue;
+                        if let Err(e) = add_attachments_result {
+                            error!("Failed to add attachments to the scheduled message with id {}. Reason: {e}", message.id());
+                            continue;
+                        }
+
+                        to_send = add_attachments_result.unwrap();
                     }
-
-                    to_send = add_attachments_result.unwrap();
                 }
 
                 let mut quiz_data = None;
