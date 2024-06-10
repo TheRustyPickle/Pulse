@@ -6,11 +6,13 @@ use serenity::prelude::*;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::time::{sleep, Duration};
-use tracing::info;
+use tracing::{error, info};
 use std::time;
 
 use crate::config::{BotConfig, PollData, QuizData};
 use crate::{OngoingQuiz, SavedBotConfig};
+
+const MAX_POLL_MINUTES: u64 = 10_080;
 
 /// Try to find the target Guild in the bot guild list
 pub fn get_target_guild(ctx: &Context, target_guild: &str) -> Option<Guild> {
@@ -52,12 +54,21 @@ pub fn add_poll(message: CreateMessage, id: u32) -> Result<CreateMessage, Error>
         return Err(anyhow!("Total answer for this poll is less than 2 which is invalid"))
     }
 
-    // TODO: take an additional param to set duration
-    // TODO: take an additional param to set whether multi answer
-    let poll = CreatePoll::new()
+    let mut duration_mins = poll_data.duration_minutes();
+
+    if duration_mins > MAX_POLL_MINUTES {
+        error!("Poll duration is larger than the maximum allowed time. Setting to 10,080 minutes");
+        duration_mins = MAX_POLL_MINUTES;
+    }
+
+    let mut poll = CreatePoll::new()
         .question(poll_data.question())
         .answers(poll_answers)
-        .duration(time::Duration::from_secs(60 * 60 * 24));
+        .duration(time::Duration::from_secs(60 * duration_mins));
+
+    if poll_data.multi_answer() {
+        poll = poll.allow_multiselect()
+    }
 
     Ok(message.poll(poll))
 }

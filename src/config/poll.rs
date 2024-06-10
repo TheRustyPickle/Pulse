@@ -8,6 +8,8 @@ pub struct PollData {
     id: u32,
     question: String,
     answers: Vec<String>,
+    duration_minutes: Option<u64>,
+    multi_answer: Option<bool>,
 }
 
 impl PollData {
@@ -21,6 +23,22 @@ impl PollData {
 
     pub fn answers(&self) -> &Vec<String> {
         &self.answers
+    }
+
+    pub fn duration_minutes(&self) -> u64 {
+        if let Some(min) = self.duration_minutes {
+            min
+        } else {
+            1440
+        }
+    }
+
+    pub fn multi_answer(&self) -> bool {
+        if let Some(multi) = self.multi_answer {
+            multi
+        } else {
+            false
+        }
     }
 
     pub fn get_all_polls() -> Result<Vec<PollData>, Error> {

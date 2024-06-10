@@ -191,10 +191,7 @@ impl Handler {
             for message in to_handle {
                 let mut to_send = CreateMessage::new().content(message.message());
 
-                let mut is_poll = false;
-
                 if let Some(id) = message.poll_id {
-                    is_poll = true;
                     let add_poll_result = add_poll(to_send, id);
 
                     if let Err(e) = add_poll_result {
@@ -209,7 +206,7 @@ impl Handler {
                 }
 
                 if let Some(locations) = &message.attachments {
-                    if is_poll {
+                    if message.poll_id.is_some() {
                         error!("Cannot add attachments to a poll message. The attachments will be ignored.");
                     } else {
                         let add_attachments_result = add_attachments(to_send, locations).await;
