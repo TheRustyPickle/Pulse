@@ -10,6 +10,7 @@ pub struct BotConfig {
     bot_token: String,
     target_guild: String,
     target_channel: String,
+    pin_all: Option<bool>,
     #[serde(skip_deserializing)]
     target_channel_id: ChannelId,
 }
@@ -26,6 +27,14 @@ impl BotConfig {
         let result: BotConfig =
             serde_json::from_str(&json_string).context("Failed to parse bot_config.json")?;
         Ok(result)
+    }
+
+    pub fn pin_all(&self) -> bool {
+        if let Some(pin) = self.pin_all {
+            pin
+        } else {
+            false
+        }
     }
 
     pub fn get_token(&self) -> String {

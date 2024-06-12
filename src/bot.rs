@@ -118,6 +118,7 @@ impl Handler {
 
         let target_guild_name = config.get_target_guild();
         let target_channel_name = config.get_target_channel();
+        let pin_all = config.pin_all();
 
         info!(
             "Target guild name: {}, Target channel name: {}",
@@ -244,12 +245,16 @@ impl Handler {
 
                 let sent_message = result.unwrap();
 
+                let mut pin_message = pin_all;
+
                 if let Some(to_pin) = message.to_pin {
-                    if to_pin {
-                        let pin_result = sent_message.pin(&ctx).await;
-                        if let Err(e) = pin_result {
-                            error!("Failed to pin scheduled message with id {}. This message will be marked as completed regardless. Reason: {e}", message.id());
-                        }
+                    pin_message = to_pin;
+                }
+
+                if pin_message {
+                    let pin_result = sent_message.pin(&ctx).await;
+                    if let Err(e) = pin_result {
+                        error!("Failed to pin scheduled message with id {}. This message will be marked as completed regardless. Reason: {e}", message.id());
                     }
                 }
 
