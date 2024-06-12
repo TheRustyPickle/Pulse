@@ -13,13 +13,15 @@ Global config that are read at the start of the bot only. The bot needs to be re
 {
     "bot_token": "Discord Bot Token",
     "target_guild": "Guild Name",
-    "target_channel": "Channel Name"
+    "target_channel": "Channel Name",
+    "pin_all": true
 }
 ```
 
 * `bot_token`: (String) A valid discord bot token. Mandatory field
 * `target_guild`: (String) The name of the guild to send scheduled message. Mandatory field
 * `target_channel`: (String) The name of the channel to send scheduled message. Mandatory field
+* `pin_all`: (Boolean) If true, all scheduled messages will be pinned. Default value is false. Optional field
 
 ### completed.json
 

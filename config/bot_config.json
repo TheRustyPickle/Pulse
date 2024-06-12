@@ -1,5 +1,6 @@
 {
     "bot_token": "My Bot Token",
     "target_guild": "My server name",
-    "target_channel": "Server channel name"
+    "target_channel": "Server channel name",
+    "pin_all": false
 }
