@@ -16,7 +16,7 @@ Pulse is a straightforward Discord bot for scheduling messages with some customi
 
 * Clone the repository
 `
-git clone https://github.com/TheRustyPickle/Rex
+git clone https://github.com/TheRustyPickle/Pulse
 `
 * Update configurations in the `config` folder as required
 
