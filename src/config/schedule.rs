@@ -14,6 +14,8 @@ pub struct ScheduledMessage {
     pub poll_id: Option<u32>,
     pub quiz_id: Option<u32>,
     pub to_pin: Option<bool>,
+    pub target_guild: Option<String>,
+    pub target_channel: Option<String>,
 }
 
 impl ScheduledMessage {
@@ -41,6 +43,10 @@ impl ScheduledMessage {
 
     pub fn scheduled_at(&self) -> DateTime<Utc> {
         self.scheduled_at
+    }
+
+    pub fn guild_no_channel(&self) -> bool {
+        self.target_guild.is_some() && self.target_channel.is_none()
     }
 }
 
