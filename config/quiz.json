@@ -9,5 +9,18 @@
         "answer": "Blue Whale",
         "reply_with": "The blue whale is indeed the largest animal on earth! Congratulations!",
         "end_at": "2024-06-01 12:00:00 UTC"
+    },
+    {
+        "id": 3,
+        "answer": "King Cobra",
+        "reply_with": "This is the longest venomous snake in the world",
+        "monitor_channel": "My Channel Name"
+    },
+    {
+        "id": 4,
+        "answer": "206",
+        "reply_with": "206 bones in human body!",
+        "monitor_guild": "A guild name where the bot will look for a channel to monitor",
+        "monitor_channel": "Channel name where the bot will monitor for the answer"
     }
 ]
