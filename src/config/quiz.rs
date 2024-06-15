@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Context, Error};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
+use serenity::model::id::ChannelId;
 use std::fs::File;
 use std::io::Read;
 
@@ -10,6 +11,10 @@ pub struct QuizData {
     answer: String,
     reply_with: String,
     end_at: Option<DateTime<Utc>>,
+    pub monitor_guild: Option<String>,
+    pub monitor_channel: Option<String>,
+    #[serde(skip_deserializing)]
+    monitor_channel_id: ChannelId,
 }
 
 impl QuizData {
@@ -50,5 +55,17 @@ impl QuizData {
             }
         }
         Err(anyhow!("Quiz with id {} not found", quiz_id))
+    }
+
+    pub fn guild_no_channel(&self) -> bool {
+        self.monitor_guild.is_some() && self.monitor_channel.is_none()
+    }
+
+    pub fn get_monitor_channel_id(&self) -> ChannelId {
+        self.monitor_channel_id
+    }
+
+    pub fn set_monitor_channel_id(&mut self, channel_id: ChannelId) {
+        self.monitor_channel_id = channel_id
     }
 }

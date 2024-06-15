@@ -11,8 +11,8 @@ use tracing::{error, info};
 
 use crate::config::{BotConfig, CompletedScheduled, QuizData, ScheduledMessage};
 use crate::utils::{
-    add_attachments, add_poll, contains_answer, get_target_channel_id, get_target_guild,
-    remove_ongoing_quiz, save_bot_config, set_ongoing_quiz, sleep_remaining_time,
+    add_attachments, add_poll, contains_answer, get_monitor_channel_id, get_target_channel,
+    get_target_guild, quiz_ongoing, remove_ongoing_quiz, set_ongoing_quiz, sleep_remaining_time,
 };
 use crate::OngoingQuiz;
 
@@ -29,7 +29,11 @@ impl EventHandler for Handler {
     }
 
     async fn message(&self, ctx: Context, new_message: Message) {
-        let target_channel = get_target_channel_id(&ctx).await;
+        if !quiz_ongoing(&ctx).await {
+            return;
+        }
+
+        let target_channel = get_monitor_channel_id(&ctx).await;
         if new_message.channel_id != target_channel {
             return;
         }
@@ -44,10 +48,6 @@ impl EventHandler for Handler {
             let data_read = ctx.data.read().await;
             let data = data_read.get::<OngoingQuiz>().unwrap();
             let ongoing_quiz = data.lock().await;
-
-            if ongoing_quiz.is_none() {
-                return;
-            }
 
             let quiz_data = ongoing_quiz.clone().unwrap();
             let quiz_answer = quiz_data.answer();
@@ -110,7 +110,8 @@ impl Handler {
             error!("Error reading the bot config. Exiting. Error: {e}");
             std::process::exit(1);
         }
-        let mut config = bot_config.unwrap();
+
+        let config = bot_config.unwrap();
 
         // Wait 5 seconds for the cache to load
         info!("Waiting for cache to load");
@@ -118,46 +119,42 @@ impl Handler {
 
         let target_guild_name = config.get_target_guild();
         let target_channel_name = config.get_target_channel();
+        let pin_all = config.pin_all();
 
         info!(
             "Target guild name: {}, Target channel name: {}",
             target_guild_name, target_channel_name
         );
 
+        let mut target_guild = None;
         let mut target_channel = None;
-        let mut target_guild = get_target_guild(&ctx, &target_guild_name);
 
-        // keep looping until the target guild is found
-        while target_guild.is_none() {
-            error!("Target guild not found. Trying again in 60 seconds");
-            sleep(Duration::from_secs(60)).await;
+        // Fetch both guild and channel in a single flow. In case the guild channel list gets
+        // updated and the target channel is part of that, this should ensure the search isn't
+        // happening on stale guild data
+        while target_guild.is_none() && target_channel.is_none() {
             target_guild = get_target_guild(&ctx, &target_guild_name);
+
+            if let Some(guild) = &target_guild {
+                info!("Target guild found");
+                target_channel = get_target_channel(guild.clone(), &target_channel_name);
+
+                if target_channel.is_none() {
+                    error!("Target channel not found. Trying again in 60 seconds");
+                }
+            } else {
+                error!("Target guild not found. Trying again in 60 seconds");
+            }
         }
 
         let target_guild = target_guild.unwrap();
-
-        // keep looping until the target channel is found
-        while target_channel.is_none() {
-            for target in &target_guild.channels {
-                if target.1.name() == target_channel_name {
-                    target_channel = Some(target);
-                    config.set_target_channel_id(*target.0);
-                    break;
-                }
-            }
-            if target_channel.is_none() {
-                error!("Failed to get target channel in the guild. Trying again in 60 seconds");
-                sleep(Duration::from_secs(60)).await;
-            }
-        }
-        save_bot_config(&ctx, config).await;
-
         let target_channel = target_channel.unwrap();
+
         info!("Target channel found");
         info!("Starting scheduling.");
 
         loop {
-            // If anything fails during this loop, sleep till the current minute ends and try
+            // For most thing that fails during this loop, sleep till the current minute ends and try
             // again the next minute
 
             let schedule_data = ScheduledMessage::get_all_scheduled_messages();
@@ -193,8 +190,15 @@ impl Handler {
             }
 
             for message in to_handle {
+                // Do not proceed any further if target_guild is provided but not target channel
+                if message.guild_no_channel() {
+                    error!("target_guild was provided but no target_channel was found for the scheduled message with id {}. This won't be set as completed.", message.id());
+                    continue;
+                }
+
                 let mut to_send = CreateMessage::new().content(message.message());
 
+                // Check for poll message, if any, add it to the message that will be sent
                 if let Some(id) = message.poll_id {
                     let add_poll_result = add_poll(to_send, id);
 
@@ -209,17 +213,23 @@ impl Handler {
                     to_send = add_poll_result.unwrap();
                 }
 
+                // Check for attachments, if any, add it to the message that will be sent
                 if let Some(locations) = &message.attachments {
-                    let add_attachments_result = add_attachments(to_send, locations).await;
+                    if message.poll_id.is_some() {
+                        error!("Cannot add attachments to a poll message. The attachments will be ignored.");
+                    } else {
+                        let add_attachments_result = add_attachments(to_send, locations).await;
 
-                    if let Err(e) = add_attachments_result {
-                        error!("Failed to add attachments to the scheduled message with id {}. Reason: {e}", message.id());
-                        continue;
+                        if let Err(e) = add_attachments_result {
+                            error!("Failed to add attachments to the scheduled message with id {}. Reason: {e}", message.id());
+                            continue;
+                        }
+
+                        to_send = add_attachments_result.unwrap();
                     }
-
-                    to_send = add_attachments_result.unwrap();
                 }
 
+                // Check if the message is quiz type. If yes, get the quiz data
                 let mut quiz_data = None;
                 if let Some(id) = message.quiz_id {
                     let quiz_data_result = QuizData::get_quiz_data(id);
@@ -231,10 +241,79 @@ impl Handler {
                         );
                         continue;
                     }
-                    quiz_data = Some(quiz_data_result.unwrap())
+                    let mut quiz = quiz_data_result.unwrap();
+
+                    // If monitor guild exist, monitor channel must also exist
+                    if quiz.guild_no_channel() {
+                        error!("monitor_guild was provided but no monitor_channel was found for the quiz with id {}. This won't be set as completed.", quiz.id());
+                        continue;
+                    }
+
+                    // If a different channel is set for monitoring, try to find that or set the
+                    // global channel as the channel to monitor
+                    // This is done before the quiz message is sent so the bot doesn't fail later when
+                    // trying to monitor for the answer
+                    if let Some(new_channel_name) = &quiz.monitor_channel {
+                        let mut guild_to_check = target_guild.clone();
+
+                        if let Some(new_guild_name) = &quiz.monitor_guild {
+                            if let Some(new_guild) = get_target_guild(&ctx, new_guild_name) {
+                                guild_to_check = new_guild;
+                            } else {
+                                error!("Failed to find the {new_guild_name} guild for the quiz with id {}. This won't be set as completed.", quiz.id());
+                                continue;
+                            }
+                        }
+
+                        if let Some((channel_id, _channel)) =
+                            get_target_channel(guild_to_check.clone(), new_channel_name)
+                        {
+                            quiz.set_monitor_channel_id(channel_id)
+                        } else {
+                            error!("Failed to find the {new_channel_name} channel for the quiz with id {}. This won't be set as completed.", quiz.id());
+                            continue;
+                        }
+                    } else {
+                        quiz.set_monitor_channel_id(target_channel.0)
+                    }
+                    quiz_data = Some(quiz)
                 }
 
-                let result = target_channel.1.send_message(&ctx, to_send).await;
+                let mut send_to_channel = None;
+
+                // If target channel is provided for this schedule message, try to find it
+                // If target guild is provided, search for the target channel in that specific
+                // guild.
+                if let Some(new_channel_name) = &message.target_channel {
+                    let mut guild_to_check = target_guild.clone();
+
+                    if let Some(new_guild_name) = &message.target_guild {
+                        if let Some(new_guild) = get_target_guild(&ctx, new_guild_name) {
+                            guild_to_check = new_guild;
+                        } else {
+                            error!("Failed to find the {new_guild_name} guild for the scheduled message with id {}. This won't be set as completed.", message.id());
+                            continue;
+                        }
+                    }
+
+                    if let Some((_channel_id, channel)) =
+                        get_target_channel(guild_to_check.clone(), new_channel_name)
+                    {
+                        send_to_channel = Some(channel);
+                    } else {
+                        error!("Failed to find the {new_channel_name} channel for the scheduled message with id {}. This won't be set as completed.", message.id());
+                        continue;
+                    }
+                }
+
+                // Send crafted message to the global target_channel in the bot config or the new channel in the
+                // scheduled message itself, if provided
+                let result = if let Some(channel) = send_to_channel {
+                    channel.send_message(&ctx, to_send).await
+                } else {
+                    target_channel.1.send_message(&ctx, to_send).await
+                };
+
                 if let Err(e) = result {
                     info!("Failed to send scheduled message with id {}. This won't be set as completed. Reason: {e}", message.id());
                     continue;
@@ -244,15 +323,21 @@ impl Handler {
 
                 let sent_message = result.unwrap();
 
+                let mut pin_message = pin_all;
+
                 if let Some(to_pin) = message.to_pin {
-                    if to_pin {
-                        let pin_result = sent_message.pin(&ctx).await;
-                        if let Err(e) = pin_result {
-                            error!("Failed to pin scheduled message with id {}. This message will be marked as completed regardless. Reason: {e}", message.id());
-                        }
+                    pin_message = to_pin;
+                }
+
+                if pin_message {
+                    let pin_result = sent_message.pin(&ctx).await;
+                    if let Err(e) = pin_result {
+                        error!("Failed to pin scheduled message with id {}. This message will be marked as completed regardless. Reason: {e}", message.id());
                     }
                 }
 
+                // Keep track of the quiz data if this is one.
+                // Will overwrite if an existing quiz is ongoing
                 if let Some(data) = quiz_data {
                     set_ongoing_quiz(&ctx, data).await;
                 }

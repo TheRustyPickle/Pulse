@@ -1,6 +1,5 @@
 use anyhow::Context;
 use serde::Deserialize;
-use serenity::model::id::ChannelId;
 use std::error::Error;
 use std::fs::File;
 use std::io::Read;
@@ -10,8 +9,7 @@ pub struct BotConfig {
     bot_token: String,
     target_guild: String,
     target_channel: String,
-    #[serde(skip_deserializing)]
-    target_channel_id: ChannelId,
+    pin_all: Option<bool>,
 }
 
 impl BotConfig {
@@ -28,6 +26,10 @@ impl BotConfig {
         Ok(result)
     }
 
+    pub fn pin_all(&self) -> bool {
+        self.pin_all.unwrap_or_default()
+    }
+
     pub fn get_token(&self) -> String {
         self.bot_token.clone()
     }
@@ -38,13 +40,5 @@ impl BotConfig {
 
     pub fn get_target_channel(&self) -> String {
         self.target_channel.clone()
-    }
-
-    pub fn get_target_channel_id(&self) -> ChannelId {
-        self.target_channel_id
-    }
-
-    pub fn set_target_channel_id(&mut self, channel_id: ChannelId) {
-        self.target_channel_id = channel_id
     }
 }

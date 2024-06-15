@@ -7,20 +7,14 @@ use config::{BotConfig, QuizData};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 use std::sync::Arc;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::Mutex;
 use tracing::error;
 
 /// Saves a quiz data to track whether a quiz is ongoing
 pub struct OngoingQuiz;
-/// Saves the bot config at the very start for later uses
-pub struct SavedBotConfig;
 
 impl TypeMapKey for OngoingQuiz {
     type Value = Arc<Mutex<Option<QuizData>>>;
-}
-
-impl TypeMapKey for SavedBotConfig {
-    type Value = Arc<RwLock<BotConfig>>;
 }
 
 #[tokio::main]

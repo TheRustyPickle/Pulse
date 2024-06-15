@@ -19,7 +19,7 @@
     },
     {
         "id": 4,
-        "message": "This is how to set a quiz message",
+        "message": "This is how to set a quiz message. what is the answer of 2 + 3?",
         "scheduled_at": "2024-06-01 15:00:00 UTC",
         "quiz_id": 1
     },
@@ -31,7 +31,7 @@
     },
     {
         "id": 6,
-        "message": "This is a quiz message with attachmenments",
+        "message": "@here This is a quiz message with attachmenments. Which one in the attachments is considered the largest animal?",
         "scheduled_at": "2024-06-01 17:00:00 UTC",
         "quiz_id": 2,
         "attachments": [
@@ -41,9 +41,22 @@
     },
     {
         "id": 7,
-        "message": "@here This is message is reusing a poll message with here mention",
+        "message": "This quiz message will be sent to different channel in the bot config guild and a different channel in the bot config guild will be monitored for the answer. What is the longest venomous snake?",
         "scheduled_at": "2024-06-01 18:00:00 UTC",
-        "poll_id": 1,
-        "to_pin": true
+        "quiz_id": 3,
+        "to_pin": true,
+        "target_channel": "A channel name",
+        "attachments": [
+            "files/video.mp4",
+            "files/image.png"
+        ]
+    },
+    {
+        "id": 8,
+        "message": "This quiz message will be sent to different channel in a different guild and a different channel in a different guild will be monitored for the answer. How many bones in a human body?",
+        "scheduled_at": "2024-06-01 18:00:00 UTC",
+        "quiz_id": 4,
+        "target_guild": "A guild name",
+        "target_channel": "A channel name"
     }
 ]
