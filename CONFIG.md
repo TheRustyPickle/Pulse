@@ -96,7 +96,7 @@ Contains an array that holds all quiz data. Does not require restart upon any ch
     "reply_with": "Congratulations! You've got the right answer!",
     "end_at": "2024-06-06T12:00:00Z",
     "monitor_guild": "My Guild Name",
-    "monitor_channel": "My Channel Name
+    "monitor_channel": "My Channel Name"
 }
 ```
 
