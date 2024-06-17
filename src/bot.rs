@@ -133,17 +133,19 @@ impl Handler {
         // updated and the target channel is part of that, this should ensure the search isn't
         // happening on stale guild data
         while target_guild.is_none() && target_channel.is_none() {
-            target_guild = get_target_guild(&ctx, &target_guild_name);
+            target_guild = get_target_guild(&ctx, &target_guild_name).await;
 
             if let Some(guild) = &target_guild {
                 info!("Target guild found");
-                target_channel = get_target_channel(guild.clone(), &target_channel_name);
+                target_channel = get_target_channel(&ctx, guild, &target_channel_name).await;
 
                 if target_channel.is_none() {
-                    error!("Target channel not found. Trying again in 60 seconds");
+                    error!("Target channel not found. Trying again in the next minute");
+                    sleep_remaining_time().await
                 }
             } else {
-                error!("Target guild not found. Trying again in 60 seconds");
+                error!("Target guild not found. Trying again in the next minute");
+                sleep_remaining_time().await
             }
         }
 
@@ -257,7 +259,7 @@ impl Handler {
                         let mut guild_to_check = target_guild.clone();
 
                         if let Some(new_guild_name) = &quiz.monitor_guild {
-                            if let Some(new_guild) = get_target_guild(&ctx, new_guild_name) {
+                            if let Some(new_guild) = get_target_guild(&ctx, new_guild_name).await {
                                 guild_to_check = new_guild;
                             } else {
                                 error!("Failed to find the {new_guild_name} guild for the quiz with id {}. This won't be set as completed.", quiz.id());
@@ -266,7 +268,7 @@ impl Handler {
                         }
 
                         if let Some((channel_id, _channel)) =
-                            get_target_channel(guild_to_check.clone(), new_channel_name)
+                            get_target_channel(&ctx, &guild_to_check, new_channel_name).await
                         {
                             quiz.set_monitor_channel_id(channel_id)
                         } else {
@@ -288,7 +290,7 @@ impl Handler {
                     let mut guild_to_check = target_guild.clone();
 
                     if let Some(new_guild_name) = &message.target_guild {
-                        if let Some(new_guild) = get_target_guild(&ctx, new_guild_name) {
+                        if let Some(new_guild) = get_target_guild(&ctx, new_guild_name).await {
                             guild_to_check = new_guild;
                         } else {
                             error!("Failed to find the {new_guild_name} guild for the scheduled message with id {}. This won't be set as completed.", message.id());
@@ -297,7 +299,7 @@ impl Handler {
                     }
 
                     if let Some((_channel_id, channel)) =
-                        get_target_channel(guild_to_check.clone(), new_channel_name)
+                        get_target_channel(&ctx, &guild_to_check, new_channel_name).await
                     {
                         send_to_channel = Some(channel);
                     } else {

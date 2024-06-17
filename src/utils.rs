@@ -14,24 +14,38 @@ use crate::OngoingQuiz;
 
 const MAX_POLL_MINUTES: u64 = 10_080;
 
-// TODO: Fetch via https instead of relying on cache
-/// Try to find the target Guild in the bot guild list
-pub fn get_target_guild(ctx: &Context, target_guild: &str) -> Option<Guild> {
-    let guilds = ctx.cache.guilds();
+/// Try to find the target Guild in the bot guild list over http
+pub async fn get_target_guild(ctx: &Context, target_guild: &str) -> Option<GuildInfo> {
+    let guild_list = ctx.http().get_guilds(None, Some(100)).await;
+
+    if guild_list.is_err() {
+        return None;
+    }
+
+    let guilds = guild_list.unwrap();
 
     for guild in guilds {
-        if let Some(g) = guild.to_guild_cached(&ctx.cache) {
-            if g.name == target_guild {
-                return Some(g.to_owned());
-            }
+        if guild.name == target_guild {
+            return Some(guild);
         }
     }
     None
 }
 
-// TODO: Fetch via https instead of the current method
-pub fn get_target_channel(guild: Guild, channel_name: &str) -> Option<(ChannelId, GuildChannel)> {
-    for (channel_id, channel) in guild.channels {
+/// Try to find the target channel in the given guild over http
+pub async fn get_target_channel(
+    ctx: &Context,
+    guild: &GuildInfo,
+    channel_name: &str,
+) -> Option<(ChannelId, GuildChannel)> {
+    let channel_list = guild.id.channels(ctx).await;
+
+    if channel_list.is_err() {
+        return None;
+    }
+
+    let channels = channel_list.unwrap();
+    for (channel_id, channel) in channels {
         if channel.name() == channel_name {
             return Some((channel_id, channel));
         }
