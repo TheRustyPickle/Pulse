@@ -4,13 +4,14 @@ use serenity::builder::{CreateAttachment, CreateMessage, CreatePoll, CreatePollA
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time;
 use tokio::time::{sleep, Duration};
 use tracing::error;
 
 use crate::config::{PollData, QuizData};
-use crate::OngoingQuiz;
+use crate::{OngoingQuiz, ThreadStarted};
 
 const MAX_POLL_MINUTES: u64 = 10_080;
 
@@ -153,4 +154,16 @@ pub fn contains_answer(content: Vec<&str>, answer: Vec<&str>) -> bool {
     content
         .windows(answer.len())
         .any(|window| window == answer.as_slice())
+}
+
+pub async fn is_thread_started(ctx: &Context) -> bool {
+    let data_read = ctx.data.read().await;
+    let data = data_read.get::<ThreadStarted>().unwrap();
+
+    data.load(Ordering::Relaxed)
+}
+
+pub async fn thread_started(ctx: &Context) {
+    let mut data = ctx.data.write().await;
+    data.insert::<ThreadStarted>(AtomicBool::new(true));
 }

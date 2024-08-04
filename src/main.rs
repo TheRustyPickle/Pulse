@@ -6,6 +6,7 @@ use bot::Handler;
 use config::{BotConfig, QuizData};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::error;
@@ -15,6 +16,12 @@ pub struct OngoingQuiz;
 
 impl TypeMapKey for OngoingQuiz {
     type Value = Arc<Mutex<Option<QuizData>>>;
+}
+
+pub struct ThreadStarted;
+
+impl TypeMapKey for ThreadStarted {
+    type Value = AtomicBool;
 }
 
 #[tokio::main]
@@ -40,6 +47,11 @@ async fn main() {
     {
         let mut data = client.data.write().await;
         data.insert::<OngoingQuiz>(Arc::new(Mutex::new(None)));
+    }
+
+    {
+        let mut data = client.data.write().await;
+        data.insert::<ThreadStarted>(AtomicBool::new(false));
     }
 
     if let Err(e) = client.start().await {

@@ -12,7 +12,8 @@ use tracing::{error, info};
 use crate::config::{BotConfig, CompletedScheduled, QuizData, ScheduledMessage};
 use crate::utils::{
     add_attachments, add_poll, contains_answer, get_monitor_channel_id, get_target_channel,
-    get_target_guild, quiz_ongoing, remove_ongoing_quiz, set_ongoing_quiz, sleep_remaining_time,
+    get_target_guild, is_thread_started, quiz_ongoing, remove_ongoing_quiz, set_ongoing_quiz,
+    sleep_remaining_time, thread_started,
 };
 use crate::OngoingQuiz;
 
@@ -21,11 +22,16 @@ pub struct Handler;
 #[async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, _ready: Ready) {
-        spawn(async move {
-            Self::start_ticking(ctx).await;
-        });
-
-        info!("The bot is ready");
+        // Prevent the thread from starting multiple times
+        if !is_thread_started(&ctx).await {
+            thread_started(&ctx).await;
+            spawn(async move {
+                Self::start_ticking(ctx).await;
+            });
+            info!("The bot is ready");
+        } else {
+            info!("Preventing the thread from starting again");
+        }
     }
 
     async fn message(&self, ctx: Context, new_message: Message) {
@@ -112,10 +118,6 @@ impl Handler {
         }
 
         let config = bot_config.unwrap();
-
-        // Wait 5 seconds for the cache to load
-        info!("Waiting for cache to load");
-        sleep(Duration::from_secs(5)).await;
 
         let target_guild_name = config.get_target_guild();
         let target_channel_name = config.get_target_channel();
