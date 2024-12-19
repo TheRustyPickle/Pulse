@@ -4,7 +4,6 @@ use serenity::builder::CreateMessage;
 use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
 use serenity::prelude::*;
-// use std::sync::Arc;
 use tokio::spawn;
 use tokio::time::{sleep, Duration};
 use tracing::{error, info};
